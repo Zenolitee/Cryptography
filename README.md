@@ -1,2 +1,3 @@
 # Cryptography
- My own cryptography algorith with encrypt and decrypt features.
+Cryptography algorith with Caesar Cipher, Vigener Cipher, and RSA. 
+More stuff added soon to make it complicated.
