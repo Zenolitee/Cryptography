@@ -1,5 +1,6 @@
 import random
 import os
+import hashlib as hl
 
 def caesar_encrypt(text, shift):
     encrypted_text = ""
@@ -21,7 +22,7 @@ def vigenere_encrypt(text, key):
     for i, char in enumerate(text):
         if char.isalpha():
             start = ord('a') if char.islower() else ord('A')
-            key_char = key[i % key_length].lower()  # Use lowercase for simplicity
+            key_char = key[i % key_length].lower()  
             key_shift = ord(key_char) - ord('a')
             encrypted_char = chr((ord(char) - start + key_shift) % 26 + start)
             encrypted_text += encrypted_char
@@ -35,7 +36,7 @@ def vigenere_decrypt(text, key):
     for i, char in enumerate(text):
         if char.isalpha():
             start = ord('a') if char.islower() else ord('A')
-            key_char = key[i % key_length].lower()  # Use lowercase for simplicity
+            key_char = key[i % key_length].lower()  
             key_shift = ord(key_char) - ord('a')
             decrypted_char = chr((ord(char) - start - key_shift) % 26 + start)
             decrypted_text += decrypted_char
@@ -97,66 +98,77 @@ def decrypt_rsa(encrypted_message, private_key):
     decrypted_message = [chr(pow(char, d, n)) for char in encrypted_message]
     return ''.join(decrypted_message)
 
-def encrypt_file(input_file_path, output_file_path, vigenere_key):
+def calculate_hashes(content):
+    binary_data = content.encode("utf-8")
+    md5_hash = hl.md5(binary_data).hexdigest()
+    sha1_hash = hl.sha1(binary_data).hexdigest()
+    return md5_hash, sha1_hash
+
+def encrypt_file(input_file_name):
     try:
+        current_directory = os.getcwd()
+
+        input_file_path = os.path.join(current_directory, input_file_name)
+        output_file_name = f'E_{input_file_name}'
+        output_file_path = os.path.join(current_directory, output_file_name)
+
+        vigenere_key = input("Enter the Vigenere key: ")
+
         with open(input_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             first_word_length = len(content.split()[0])
             caesar_shift_1 = first_word_length
-            caesar_shift_2 = first_word_length  # Use the same shift as the previous Caesar Cipher
-            caesar_encrypted_content = caesar_encrypt(content, -caesar_shift_1)  # Corrected shift direction
+            caesar_shift_2 = first_word_length
+            caesar_encrypted_content = caesar_encrypt(content, -caesar_shift_1)
             vigenere_encrypted_content = vigenere_encrypt(caesar_encrypted_content, vigenere_key)
-            final_encrypted_content = caesar_encrypt(vigenere_encrypted_content, -caesar_shift_2)  # Corrected shift direction
+            final_encrypted_content = caesar_encrypt(vigenere_encrypted_content, -caesar_shift_2)
             reversed_content = reverse_text(final_encrypted_content)
 
-            # RSA Encryption
+            md5_original, sha1_original = calculate_hashes(content)
+
             public_key, private_key = generate_keypair()
             rsa_encrypted_content = encrypt_rsa(reversed_content, public_key)
 
-            # Save RSA encrypted content to file
             with open(output_file_path, 'w', encoding='utf-8') as file:
                 file.write(','.join(map(str, rsa_encrypted_content)))
 
-            # Save private key to file without label
-            with open(f'{output_file_path[:-4]}_keys.txt', 'w', encoding='utf-8') as key_file:
+            with open(f'{output_file_path[:-4]}_key.txt', 'w', encoding='utf-8') as key_file:
                 key_file.write(','.join(map(str, private_key)))
 
-            # Save Vigenere key to a separate file without label
             vigenere_key_file_path = f'{output_file_path[:-4]}_vigenere_key.txt'
             with open(vigenere_key_file_path, 'w', encoding='utf-8') as vigenere_key_file:
                 vigenere_key_file.write(vigenere_key)
 
         print(f"Encryption successful. RSA encrypted content saved to {output_file_path}")
         print(f"Vigenere key saved to {vigenere_key_file_path}")
-        print(f"Private key saved to {output_file_path[:-4]}_keys.txt")
+        print(f"Private key saved to {output_file_path[:-4]}_key.txt")
 
     except FileNotFoundError:
         print(f"Error: The file '{input_file_path}' does not exist.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def decrypt_file(input_file_path, output_file_path):
-    private_key = None  # Initialize private_key variable
+def decrypt_file(input_file_name):
+    private_key = None
+    md5_original, sha1_original = None, None  
     try:
-        # Check if the input file exists
-        if not os.path.exists(input_file_path):
-            raise FileNotFoundError(f"The file '{input_file_path}' does not exist.")
+        current_directory = os.getcwd()
 
-        # Extract information from the input file name
+        input_file_path = os.path.join(current_directory, input_file_name)
         base_name = os.path.basename(input_file_path)
-        prefix, file_name = base_name.split('_', 1)
+        prefix, suffix = base_name.split('_', 1)
 
-        if prefix == 'Encrypted':
-            # Extract the Vigenere key from the separate file without label
-            vigenere_key_file_path = f'{input_file_path[:-4]}_vigenere_key.txt'
+        if prefix in ['E', 'D']:
+            file_name, extension = os.path.splitext(suffix)
+            vigenere_key_file_path = os.path.join(current_directory, f'{file_name}_vigenere_key.txt')
+            print(f"Attempted Vigenere key file path: {vigenere_key_file_path}")
             if not os.path.exists(vigenere_key_file_path):
                 raise FileNotFoundError(f"The Vigenere key file '{vigenere_key_file_path}' does not exist.")
 
             with open(vigenere_key_file_path, 'r', encoding='utf-8') as vigenere_key_file:
                 vigenere_key = vigenere_key_file.read()
 
-            # Extract the private key from the separate file without label
-            private_key_file_path = f'{input_file_path[:-4]}_keys.txt'
+            private_key_file_path = os.path.join(current_directory, f'{file_name}_key.txt')
             if not os.path.exists(private_key_file_path):
                 raise FileNotFoundError(f"The private key file '{private_key_file_path}' does not exist.")
 
@@ -165,32 +177,45 @@ def decrypt_file(input_file_path, output_file_path):
 
             private_key = tuple(map(int, private_key_str.split(',')))
 
-            # Decryption process
             with open(input_file_path, 'r', encoding='utf-8') as file:
                 content = file.read().split(',')
                 rsa_encrypted_content = [int(char) for char in content]
+
+            original_content = decrypt_rsa(rsa_encrypted_content, private_key)
+            original_content = reverse_text(original_content)
+            md5_original, sha1_original = calculate_hashes(original_content)
 
             decrypted_content = decrypt_rsa(rsa_encrypted_content, private_key)
             decrypted_content = reverse_text(decrypted_content)
 
             first_word_length = len(decrypted_content.split()[0])
             caesar_shift_1 = first_word_length
-            caesar_shift_2 = first_word_length  # Use the same shift as the previous Caesar Cipher
+            caesar_shift_2 = first_word_length
 
             vigenere_decrypted_content = caesar_decrypt(decrypted_content, -caesar_shift_2)
             vigenere_decrypted_content = vigenere_decrypt(vigenere_decrypted_content, vigenere_key)
 
-            # Extra Caesar decryption
+            md5_decrypted, sha1_decrypted = calculate_hashes(decrypted_content)
+
             final_decrypted_content = caesar_decrypt(vigenere_decrypted_content, -caesar_shift_1)
 
-            # Save decrypted content to file
+            output_file_name = f'D_{suffix}'
+            output_file_path = os.path.join(current_directory, output_file_name)
+
             with open(output_file_path, 'w', encoding='utf-8') as file:
                 file.write(final_decrypted_content)
 
             print(f"Decryption successful. Decrypted content saved to {output_file_path}")
 
-        else:
-            print("Invalid file format. Please provide an 'Encrypted' file for decryption.")
+            if md5_original == md5_decrypted and sha1_original == sha1_decrypted:
+                print("Hash values match. Content is intact.")
+            else:
+                print("Hash values do not match. Content may be corrupted.")
+
+            print(f"\nOriginal MD5: {md5_original}")
+            print(f"Original SHA1: {sha1_original}")
+            print(f"\nDecrypted MD5: {md5_decrypted}")
+            print(f"Decrypted SHA1: {sha1_decrypted}")
 
     except FileNotFoundError as e:
         print(f"Error: {e}")
@@ -199,37 +224,19 @@ def decrypt_file(input_file_path, output_file_path):
 
 
 
-# Example usage:
-# Get user input for encryption or decryption
-action = input("Do you want to (E)ncrypt or (D)ecrypt? ").upper()
 
-if action == 'E':
-    # Encryption process
-    # Get input file name from the user
-    input_file_name = input("Enter the name of the text file to encrypt (including extension): ")
-    input_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{input_file_name}'
 
-    # Generate output file name based on the input file name
-    output_file_name = f'Encrypted_{input_file_name}'
-    output_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{output_file_name}'
+if __name__ == "__main__":
+    action = input("Welcome!\n\n\nE - Encryption\nD - Decryption\nInput:").upper()
 
-    # Get Vigenere key from the user
-    vigenere_key = input("Enter the Vigenere key: ")
+    if action == 'E':
+        input_file_name = input("\nEnter the name of the text file to encrypt (filename).txt:  ")
+        encrypt_file(input_file_name)
 
-    encrypt_file(input_file_path, output_file_path, vigenere_key)
+    elif action == 'D':
+        input_file_name = input("\nEnter the name of the text file to decrypt (filename).txt: ")
+        decrypt_file(input_file_name)
 
-elif action == 'D':
-    # Decryption process
-    # Get input file name from the user
-    input_file_name = input("Enter the name of the text file to decrypt (including extension): ")
-    input_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{input_file_name}'
-
-    # Generate output file name based on the input file name
-    output_file_name = f'Decrypted_{input_file_name}'
-    output_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{output_file_name}'
-
-    decrypt_file(input_file_path, output_file_path)
-
-else:
-    print("Invalid option. Please enter 'E' for encryption or 'D' for decryption.")
-
+    else:
+        print("Invalid option. Please enter 'E' for encryption or 'D' for decryption.")
+ 
