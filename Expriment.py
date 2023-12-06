@@ -146,7 +146,8 @@ def decrypt_file(input_file_path, output_file_path):
         base_name = os.path.basename(input_file_path)
         prefix, file_name = base_name.split('_', 1)
 
-        if prefix == 'E':
+        if prefix == 'Encrypted':
+            # Extract the Vigenere key from the separate file without label
             vigenere_key_file_path = f'{input_file_path[:-4]}_vigenere_key.txt'
             if not os.path.exists(vigenere_key_file_path):
                 raise FileNotFoundError(f"The Vigenere key file '{vigenere_key_file_path}' does not exist.")
@@ -154,6 +155,7 @@ def decrypt_file(input_file_path, output_file_path):
             with open(vigenere_key_file_path, 'r', encoding='utf-8') as vigenere_key_file:
                 vigenere_key = vigenere_key_file.read()
 
+            # Extract the private key from the separate file without label
             private_key_file_path = f'{input_file_path[:-4]}_keys.txt'
             if not os.path.exists(private_key_file_path):
                 raise FileNotFoundError(f"The private key file '{private_key_file_path}' does not exist.")
@@ -163,6 +165,7 @@ def decrypt_file(input_file_path, output_file_path):
 
             private_key = tuple(map(int, private_key_str.split(',')))
 
+            # Decryption process
             with open(input_file_path, 'r', encoding='utf-8') as file:
                 content = file.read().split(',')
                 rsa_encrypted_content = [int(char) for char in content]
@@ -172,13 +175,15 @@ def decrypt_file(input_file_path, output_file_path):
 
             first_word_length = len(decrypted_content.split()[0])
             caesar_shift_1 = first_word_length
-            caesar_shift_2 = first_word_length  
+            caesar_shift_2 = first_word_length  # Use the same shift as the previous Caesar Cipher
 
             vigenere_decrypted_content = caesar_decrypt(decrypted_content, -caesar_shift_2)
             vigenere_decrypted_content = vigenere_decrypt(vigenere_decrypted_content, vigenere_key)
 
+            # Extra Caesar decryption
             final_decrypted_content = caesar_decrypt(vigenere_decrypted_content, -caesar_shift_1)
 
+            # Save decrypted content to file
             with open(output_file_path, 'w', encoding='utf-8') as file:
                 file.write(final_decrypted_content)
 
@@ -192,26 +197,35 @@ def decrypt_file(input_file_path, output_file_path):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-action = input("Welcome! \n\n\nE - Encryption \nD - Decryption\nInput:").upper()
+
+
+# Example usage:
+# Get user input for encryption or decryption
+action = input("Do you want to (E)ncrypt or (D)ecrypt? ").upper()
 
 if action == 'E':
-  
-    input_file_name = input("\nEnter the name of the text file to encrypt (filename).txt:  ")
+    # Encryption process
+    # Get input file name from the user
+    input_file_name = input("Enter the name of the text file to encrypt (including extension): ")
     input_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{input_file_name}'
 
-    output_file_name = f'E_{input_file_name}'
+    # Generate output file name based on the input file name
+    output_file_name = f'Encrypted_{input_file_name}'
     output_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{output_file_name}'
 
+    # Get Vigenere key from the user
     vigenere_key = input("Enter the Vigenere key: ")
 
     encrypt_file(input_file_path, output_file_path, vigenere_key)
 
 elif action == 'D':
-  
-    input_file_name = input("\nEnter the name of the text file to decrypt (filename).txt: ")
+    # Decryption process
+    # Get input file name from the user
+    input_file_name = input("Enter the name of the text file to decrypt (including extension): ")
     input_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{input_file_name}'
 
-    output_file_name = f'D_{input_file_name}'
+    # Generate output file name based on the input file name
+    output_file_name = f'Decrypted_{input_file_name}'
     output_file_path = f'C:\\Users\\Zen\\Desktop\\Cryptography\\Cryptography\\{output_file_name}'
 
     decrypt_file(input_file_path, output_file_path)
