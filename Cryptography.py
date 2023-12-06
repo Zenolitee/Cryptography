@@ -99,7 +99,7 @@ def decrypt_rsa(encrypted_message, private_key):
 
 def encrypt_file(input_file_path, output_file_path, vigenere_key):
     try:
-        with open(input_file_path, 'r') as file:
+        with open(input_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             first_word_length = len(content.split()[0])
             caesar_shift_1 = first_word_length
@@ -113,13 +113,13 @@ def encrypt_file(input_file_path, output_file_path, vigenere_key):
             public_key, private_key = generate_keypair()
             rsa_encrypted_content = encrypt_rsa(reversed_content, public_key)
 
-        with open(output_file_path, 'w') as file:
+        with open(output_file_path, 'w', encoding='utf-8') as file:
             # Save the RSA encrypted content
             file.write(','.join(map(str, rsa_encrypted_content)))
 
             # Save the private key for decryption
             file.write(f'\nPrivate Key: {",".join(map(str, private_key))}')
-        
+
         print(f"Encryption successful. Encrypted content and private key saved to {output_file_path}")
 
     except FileNotFoundError:
@@ -129,7 +129,7 @@ def encrypt_file(input_file_path, output_file_path, vigenere_key):
 
 def decrypt_file(input_file_path, output_file_path, vigenere_key, private_key):
     try:
-        with open(input_file_path, 'r') as file:
+        with open(input_file_path, 'r', encoding='utf-8') as file:
             content = file.read().split(',')
             rsa_encrypted_content = [int(char) for char in content]
 
@@ -147,15 +147,16 @@ def decrypt_file(input_file_path, output_file_path, vigenere_key, private_key):
             # Extra Caesar decryption
             final_decrypted_content = caesar_decrypt(vigenere_decrypted_content, -caesar_shift_1)
 
-        with open(output_file_path, 'w') as file:
+        with open(output_file_path, 'w', encoding='utf-8') as file:
             file.write(final_decrypted_content)
-        
+
         print(f"Decryption successful. Decrypted content saved to {output_file_path}")
 
     except FileNotFoundError:
         print(f"Error: The file '{input_file_path}' does not exist.")
     except Exception as e:
         print(f"An error occurred: {e}")
+
 
 
 
@@ -199,4 +200,3 @@ elif action == 'D':
 
 else:
     print("Invalid option. Please enter 'E' for encryption or 'D' for decryption.")
-
